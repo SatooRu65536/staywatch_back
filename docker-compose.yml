@@ -1,0 +1,48 @@
+version: "3"
+services:
+  mysql:
+    container_name: staywatch_db
+    command: --default-authentication-plugin=caching_sha2_password
+    build:
+      context: ./mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    env_file:
+      - ./mysql/env/db.env
+    networks:
+      - staywatch_network
+    healthcheck: # here
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p$MYSQL_ROOT_PASSWORD",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  api:
+    container_name: staywatch_api
+    build:
+      context: ./
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    tty: true
+    networks:
+      - staywatch_network
+
+networks:
+  staywatch_network:
+    driver: bridge
